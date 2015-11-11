@@ -10,6 +10,8 @@ import UIKit
 
 class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
+    @IBOutlet weak var tableView: UITableView!
+    
     @IBAction func showAlert(sender: UIButton) {
         let alertController = UIAlertController(title: "Settings", message: "Settings go here", preferredStyle: .Alert)
         
@@ -19,13 +21,20 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         presentViewController(alertController, animated: true, completion: nil)
     }
     
-    private let subjects = ["Mathematics", "Marvel Super Heroes", "Science"]
+    let images = [UIImage(named: "mathGreen"), UIImage(named: "heroGreen"), UIImage(named: "scienceGreen")]
+    let highlightImages = [UIImage(named: "mathPurple"), UIImage(named: "heroPurple"), UIImage(named: "sciencePurple")]
+    //private let subjects = ["Mathematics", "Marvel Super Heroes", "Science"]
+    //Quiz data for all of the subjects
+    let subjects: [QuestionSet] = quizSubjects
+    var studentAnswer = StudentAnswer(questionIndex: 0, selectedOption: 0, correctAnswerCount: 0)
     
     let tableIdentifier = "TableIdentifier"
+    let quizToQuestionSegueIdentifier = "quizToQuestion"
+    
+    var chosenQuizIndex = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
     }
 
     override func didReceiveMemoryWarning() {
@@ -40,24 +49,33 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier(tableIdentifier) as UITableViewCell!
         
-//        if cell == nil {
-//            //NSLog("Generate cell")
-//            cell = UITableViewCell(style: UITableViewCellStyle.Default, reuseIdentifier: tableIdentifier)
-//        }
-        
         //Add image
         let imageView = cell.viewWithTag(1) as! UIImageView
-        let imageBook = UIImage(named: "bookPurple")
-        imageView.image = imageBook
-        let imageBookHighlighted = UIImage(named: "bookGreen")
-        imageView.highlightedImage = imageBookHighlighted
+        //let imageBook = UIImage(named: "bookPurple")
+        imageView.image = images[indexPath.row]
+        //let imageBookHighlighted = UIImage(named: "bookGreen")
+        imageView.highlightedImage = highlightImages[indexPath.row]
 
         //Add text
         let textLabel = cell.viewWithTag(2) as! UILabel
-        textLabel.text = subjects[indexPath.row]
-        //cell.textLabel?.font = UIFont.boldSystemFontOfSize(30)
+        textLabel.text = subjects[indexPath.row].subject
         
         return cell
+    }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        
+        if segue.identifier == quizToQuestionSegueIdentifier {
+            if let destination = segue.destinationViewController as? QuestionViewController {
+                if let cellIndexPath = tableView.indexPathForSelectedRow {
+                    //The set of questions based on selection of subject
+                    destination.receivedQuizData = subjects[cellIndexPath.row]
+                    
+                    //Student's answer, initialized with 0s
+                    destination.studentAnswer = studentAnswer
+                }
+            }
+        }
     }
     
     
