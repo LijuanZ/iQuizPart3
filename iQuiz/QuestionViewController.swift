@@ -82,7 +82,8 @@ class QuestionViewController: UIViewController, UITableViewDataSource, UITableVi
     
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         //Update student answer of the current question
-        studentAnswer.selectedOption = indexPath.row
+        //Since the current answer is start from 1, need to add 1 to row
+        studentAnswer.selectedOption = indexPath.row + 1
     }
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {

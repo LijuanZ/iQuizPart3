@@ -36,8 +36,12 @@ class AnswerViewController: UIViewController {
             resultLabel.text = "Wrong Answer"
         }
         
-        studentAnswerLabel.text = "Your Answer: " + curQuestion.options[studentAnswer.selectedOption]
-        correctAnswerLabel.text = "Correct Answer: " + curQuestion.options[curQuestion.correctAnswer]
+        if studentAnswer.selectedOption == 0 {
+            studentAnswerLabel.text = "You did not select any answer."
+        } else {
+            studentAnswerLabel.text = "Your Answer: " + curQuestion.options[studentAnswer.selectedOption - 1]
+        }
+        correctAnswerLabel.text = "Correct Answer: " + curQuestion.options[curQuestion.correctAnswer - 1]
 
         //Left swipe
         let leftSwipe = UISwipeGestureRecognizer(target: self, action: "respondToSwipe:")

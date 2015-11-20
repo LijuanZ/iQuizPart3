@@ -8,7 +8,7 @@
 
 import UIKit
 
-class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UIPopoverPresentationControllerDelegate {
     
     @IBOutlet weak var tableView: UITableView!
     
@@ -23,18 +23,40 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     
     let images = [UIImage(named: "mathGreen"), UIImage(named: "heroGreen"), UIImage(named: "scienceGreen")]
     let highlightImages = [UIImage(named: "mathPurple"), UIImage(named: "heroPurple"), UIImage(named: "sciencePurple")]
-    //private let subjects = ["Mathematics", "Marvel Super Heroes", "Science"]
+    
     //Quiz data for all of the subjects
-    let subjects: [QuestionSet] = quizSubjects
+    var quizData: QuizData = myQuizData
     var studentAnswer = StudentAnswer(questionIndex: 0, selectedOption: 0, correctAnswerCount: 0)
     
     let tableIdentifier = "TableIdentifier"
     let quizToQuestionSegueIdentifier = "quizToQuestion"
+    let toSettingsSegueIdentifier = "toSettings"
     
-    var chosenQuizIndex = 0
-
+    var refreshControl:UIRefreshControl!
+    
+    
+    func refresh(sender:AnyObject)
+    {
+        // Code to refresh table view
+        print("Pull to refresh")
+        myQuizData.getJsonFromUrl(myQuizData.sourceUrl)
+        tableView.reloadData()
+        
+        self.refreshControl.endRefreshing()
+    }
+    
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        //quizData = myQuizData
+        
+        //Pull to refresh
+        self.refreshControl = UIRefreshControl()
+        self.refreshControl.attributedTitle = NSAttributedString(string: "Pull to refresh")
+        self.refreshControl.addTarget(self, action: "refresh:", forControlEvents: UIControlEvents.ValueChanged)
+        self.tableView.addSubview(refreshControl)
+        self.tableView.reloadData()
     }
 
     override func didReceiveMemoryWarning() {
@@ -42,8 +64,28 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         // Dispose of any resources that can be recreated.
     }
     
+    @IBAction func exit(segue: UIStoryboardSegue) {
+        print("Move back")
+
+        if let sourceVC = segue.sourceViewController as? SettingsViewController {
+            if sourceVC.quizData != nil && sourceVC.quizData!.questionSetArr.count > 0 {
+                //Exit from setting, need to reload tableView since myQuizData is updated
+                myQuizData = sourceVC.quizData!
+                quizData = myQuizData
+                
+                //Update tableView
+                tableView.reloadData()
+            }
+        }
+    }
+    
+    func adaptivePresentationStyleForPresentationController(PC: UIPresentationController) -> UIModalPresentationStyle {
+        // This *forces* a popover to be displayed on the iPhone
+        return .None
+    }
+    
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return subjects.count
+        return quizData.questionSetArr.count
     }
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
@@ -58,7 +100,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
 
         //Add text
         let textLabel = cell.viewWithTag(2) as! UILabel
-        textLabel.text = subjects[indexPath.row].subject
+        textLabel.text = quizData.questionSetArr[indexPath.row].title
         
         return cell
     }
@@ -69,15 +111,15 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
             if let destination = segue.destinationViewController as? QuestionViewController {
                 if let cellIndexPath = tableView.indexPathForSelectedRow {
                     //The set of questions based on selection of subject
-                    destination.receivedQuizData = subjects[cellIndexPath.row]
+                    destination.receivedQuizData = quizData.questionSetArr[cellIndexPath.row]
                     
                     //Student's answer, initialized with 0s
                     destination.studentAnswer = studentAnswer
                 }
             }
         }
+        
     }
-    
     
 }
 

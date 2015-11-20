@@ -9,16 +9,19 @@
 import UIKit
 
 class QuestionSet: NSObject {
-    var subject: String
+    var title: String
+    var desc: String
     var questions: [Question]
     
-    init(subject: String, questions: [Question]) {
-        self.subject = subject
+    init(title: String, desc: String, questions: [Question]) {
+        self.title = title
+        self.desc = desc
         self.questions = questions
     }
     
     override init() {
-        self.subject = ""
+        self.title = ""
+        self.desc = ""
         self.questions = []
     }
 

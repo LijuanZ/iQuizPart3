@@ -8,21 +8,144 @@
 
 import UIKit
 
-//Maths questions
-let mathQuestion1 = Question(questionBody: "5 + 9 = ?", options: ["12", "13", "14", "15"], correctAnswer: 2)
-let mathQuestion2 = Question(questionBody: "5 * 9 = ?", options: ["45", "40", "63", "36"], correctAnswer: 0)
-let mathQuestion3 = Question(questionBody: "3 + 3 * 2 = ?", options: ["5", "7", "8", "9"], correctAnswer: 3)
-let mathQuestion4 = Question(questionBody: "What is the average of 4, 5, 6, 7, 8, 9 ?", options: ["5.5", "6.5", "7.5", "8.5"], correctAnswer: 1)
+let urlStr: String = "http://tednewardsandbox.site44.com/questions.json"
+var myQuizData: QuizData = QuizData(sourceUrl: urlStr)
 
-//Science questions
-let scienceQuestion1 = Question(questionBody: "What is fire?", options: ["One of the four classical elements", "A magical reaction given to us by God", "A band that hasn't yet been discovered", "Fire! Fire! Fire! heh-heh"], correctAnswer: 0)
+class QuizData {
+    var sourceUrl: String
+    var questionSetArr: [QuestionSet]
+    init(sourceUrl: String) {
+        self.sourceUrl = sourceUrl
+        self.questionSetArr = [QuestionSet]()
+        self.getJsonFromUrl(self.sourceUrl)
+    }
+    
+    func httpGet(request: NSURLRequest!, callback: (NSString, String?) -> Void) {
+        let session = NSURLSession.sharedSession()
+        let task = session.dataTaskWithRequest(request) {
+            (data, response, error) -> Void in
+            if error != nil {
+                callback("", error!.localizedDescription)
+            } else {
+                let result = NSString(data: data!, encoding: NSASCIIStringEncoding)!
+                callback(result, nil)
+            }
+        }
+        task.resume()
+    }
+    
+    func writeToDocumentsFile(fileName: String, value: NSData) {
+        let documentsPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as NSString
+        let path = documentsPath.stringByAppendingPathComponent(fileName)
+        //var error: NSError?
+        value.writeToFile(path, atomically: true)
+    }
+    
+    func readFromDocumentsFile(fileName: String) -> NSData? {
+        let documentsPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as NSString
+        let path = documentsPath.stringByAppendingPathComponent(fileName)
+        let checkValidation = NSFileManager.defaultManager()
+        //var error: NSError?
+        var result: NSData?
+        
+        if checkValidation.fileExistsAtPath(path) {
+            result = NSData(contentsOfFile: path)
+        } else {
+            NSLog("Error: \(fileName) does not exist")
+        }
+        return result
+    }
+    
+    func getJsonFromUrl(urlStr: String) -> Void {
+        let fileName = "quizQuestions.txt"
+        let url = NSURL(string: urlStr)
+        if url != nil {
+            let request = NSMutableURLRequest(URL: url!)
+            
+            let session = NSURLSession.sharedSession()
+            
+            let task = session.dataTaskWithRequest(request) {
+                (data, response, error) -> Void in
+                if error != nil {
+                    //Failed to get data from http request
+                    print(error)
+                    print("Fail to get data from URL, read data from local storage")
+                    //Read data from local storage if exist
+                    let dataFromFile = self.readFromDocumentsFile(fileName)
+                    if dataFromFile != nil {
+                        self.questionSetArr = self.parseJSONToQuestions(dataFromFile!)
+                    } else {
+                        print("Failed to read data from \(fileName)")
+                    }
+                    
+                } else {
+                    //Get data successfully, store JSON data to local storage
+                    print("Get data from URL successfully")
+                    
+                    //Store data to local storage
+                    self.writeToDocumentsFile(fileName, value: data!)
+                    
+                    //parse JSON
+                    self.questionSetArr = self.parseJSONToQuestions(data!)
+                }
+                
+                dispatch_async(dispatch_get_main_queue()) {
+                    let storyboard = UIStoryboard(name: "Main", bundle: nil)
+                    let vc = storyboard.instantiateViewControllerWithIdentifier("mainViewController") as! ViewController
+                    if let tableView = vc.tableView {
+                        tableView.reloadData()
+                    }
+                }
+            }
+            
 
-//Marvel Super Heroes questions
-let mshQuestion1 = Question(questionBody: "Who founded the X-Men?", options: ["Tony Stark", "The X-Institute", "Professor X", "Erik Lensherr"], correctAnswer: 2)
-let mshQuestion2 = Question(questionBody: "How did Spider-Man get his powers?", options: ["He was bitten by a radioactive spider", "He ate a radioactive spider", "He is a radioactive spider", "He looked at a radioactive spider"], correctAnswer: 0)
+            
+            
+            task.resume()
+        } else {
+            NSLog("Invalid URL")
+        }
 
-let questionSetOfMaths: QuestionSet = QuestionSet(subject: "Mathematics", questions: [mathQuestion1, mathQuestion2, mathQuestion3, mathQuestion4])
-let questionSetOfScience: QuestionSet = QuestionSet(subject: "Science", questions: [scienceQuestion1])
-let questionSetOfMarvelSuperHeroes: QuestionSet = QuestionSet(subject: "Marvel Super Heroes", questions: [mshQuestion1, mshQuestion2])
+    }
+    
+    func parseJSONToQuestions(data: NSData) -> [QuestionSet] {
+        var questionSetArr: [QuestionSet] = [QuestionSet]()
+        do {
+            let resultJSON = try NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions())
+            let resultArray = resultJSON as? NSArray
+            
+            for jsonObjectString in resultArray! {
+                let questionSet: QuestionSet = QuestionSet()
+                questionSet.title = (jsonObjectString["title"]!) as! String
+                questionSet.desc = (jsonObjectString["desc"]!) as! String
+                let quesArr = jsonObjectString["questions"]! as! NSArray
+                var questions: [Question] = [Question]()
+                
+                for questionString in quesArr {
+                    var answers: [String] = [String]()
+                    let ansArr = questionString["answers"]! as! NSArray
+                    for ans in ansArr {
+                        answers.append(ans as! String)
+                    }
 
-let quizSubjects = [questionSetOfMaths, questionSetOfMarvelSuperHeroes, questionSetOfScience]
+                    let question: Question = Question(questionBody: questionString["text"]! as! String, options: answers, correctAnswer: Int(questionString["answer"]! as! String)!)
+
+                    questions.append(question)
+                }
+                
+                questionSet.questions = questions
+                questionSetArr.append(questionSet)
+                
+            }
+            
+        } catch _{
+            print("Received JSON is not well formatted!")
+        }
+        
+        return questionSetArr
+    }
+
+}
+
+
+
